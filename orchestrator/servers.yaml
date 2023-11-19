@@ -1,0 +1,14 @@
+# servers.yaml
+defaults:
+  port: 18443
+  tcpdump_options: "-i eth0"
+
+servers:
+  - ip: 192.168.1.10
+    port: 18444
+    tcpdump_options: "-i eth1 -s 0"
+  - ip: 192.168.1.20
+    # Port and tcpdump_options will be taken from the defaults
+  - ip: 192.168.1.30
+    port: 18446
+    # tcpdump_options will be taken from the defaults
