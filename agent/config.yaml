@@ -1,0 +1,14 @@
+# config.yaml
+
+# Application settings
+app:
+  basedir: "capture"
+  port: "0.0.0.0:18443"
+  sslcert: "cert/certificate.crt"
+  sslkey: "cert/private.key"
+  testhttps: false
+
+# RADIUS settings
+radius:
+  secret: "testing123"
+  address: "127.0.0.1:1812"
