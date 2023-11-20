@@ -7,8 +7,10 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"path/filepath"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -81,8 +83,9 @@ func main() {
 	r.GET("/download_pcap", downloadPcap)
 	r.POST("/delete_pcap", deletePcap)
 	r.GET("/list_sessions", listSessions)
-	r.GET("/get_filesize", getFilesize) // Add new route for file size
-	r.GET("/get_duration", getDuration) // Add new route for capture session duration
+	r.GET("/get_filesize", getFilesize)          // report pcap file size
+	r.GET("/get_duration", getDuration)          // report capture session duration
+	r.GET("/get_storage_space", getStorageSpace) // report available storage space
 	if testHttpsFlag {
 		r.GET("/test_https", testHttps)   // Add the new route for testing HTTPS
 		r.GET("/test_radius", testRadius) // Add the new route for testing RADIUS+HTTPS
@@ -446,6 +449,56 @@ func listSessions(c *gin.Context) {
 
 	// Return the list of sessions
 	c.JSON(http.StatusOK, gin.H{"status": "success", "sessions": sessionsList})
+}
+
+// Function to report available storage space on the volume where baseDir is located
+func getStorageSpace(c *gin.Context) {
+	// Acquire the mutex to prevent concurrent requests
+	mutex.Lock()
+	defer mutex.Unlock()
+
+	// Authenticate the user using RADIUS
+	if !authenticateUser(c) {
+		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
+		return
+	}
+
+	// Get the baseDir path
+	baseDir := viper.GetString("baseDir")
+
+	// Get the volume path for baseDir
+	volumePath := getVolumePath(baseDir)
+
+	// Get the available space on the volume
+	availableSpaceMB, err := getAvailableSpaceMB(volumePath)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Available storage space in MB", "available_space_mb": availableSpaceMB})
+}
+
+// Function to get the volume path for a given directory
+func getVolumePath(dir string) string {
+	volumePath := dir
+	if filepath.IsAbs(dir) {
+		volumePath = filepath.VolumeName(dir)
+	}
+	return volumePath
+}
+
+// Function to get the available space in MB on a volume
+func getAvailableSpaceMB(volumePath string) (float64, error) {
+	var stat syscall.Statfs_t
+	err := syscall.Statfs(volumePath, &stat)
+	if err != nil {
+		return 0, err
+	}
+
+	// Calculate available space in MB
+	availableSpaceMB := float64(stat.Bavail*uint64(stat.Bsize)) / (1024 * 1024)
+	return availableSpaceMB, nil
 }
 
 func isRootUser() bool {
