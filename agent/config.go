@@ -17,7 +17,7 @@ func loadDefaultConfiguration() {
 	viper.SetDefault("app.testhttps", false)
 }
 
-// loadConfiguration loads configuration from a file using Viper or your preferred configuration library.
+// loadConfiguration loads configuration from a file using Viper
 func loadConfigurationFromFile() {
 	viper.SetConfigName("config") // Name of your configuration file (without extension)
 	viper.SetConfigType("yaml")   // Choose the appropriate configuration file type (e.g., JSON, YAML)

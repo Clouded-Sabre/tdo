@@ -24,8 +24,8 @@ def start_tcpdump(ip, port, tcpdump_options, session_name):
         json={
             "pcap_filename": "capture.pcap",
             "tcpdump_options": tcpdump_options,
-            "session_name": session_name,
         },
+        params={"session_name": session_name},  # Include session_name as a URL parameter
         verify=False,  # Disable SSL verification for now
     )
 
@@ -42,7 +42,7 @@ def stop_and_download(ip, port, timestamp, session_name):
     response_stop = requests.post(
         f"{api_base_url}/stop_tcpdump",
         auth=(RADIUS_USERNAME, RADIUS_PASSWORD),
-        json={"session_name": session_name},
+        params={"session_name": session_name},  # Include session_name as a URL parameter
         verify=False,  # Disable SSL verification for now
     )
 
@@ -51,7 +51,7 @@ def stop_and_download(ip, port, timestamp, session_name):
         response_download = requests.get(
             f"{api_base_url}/download_pcap",
             auth=(RADIUS_USERNAME, RADIUS_PASSWORD),
-            json={"session_name": session_name},
+            params={"session_name": session_name},  # Include session_name as a URL parameter
             verify=False,  # Disable SSL verification for now
         )
 
@@ -64,7 +64,7 @@ def stop_and_download(ip, port, timestamp, session_name):
             response_delete = requests.post(
                 f"{api_base_url}/delete_pcap",
                 auth=(RADIUS_USERNAME, RADIUS_PASSWORD),
-                json={"session_name": session_name},
+                params={"session_name": session_name},  # Include session_name as a URL parameter
                 verify=False,  # Disable SSL verification for now
             )
 

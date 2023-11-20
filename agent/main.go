@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -19,7 +20,7 @@ import (
 
 var (
 	mutex             sync.Mutex
-	tcpdumpSessions   map[string]tcpdumpSession
+	tcpdumpSessions   = make(map[string]*tcpdumpSession)
 	baseDirFlag       string
 	listenAddressFlag string
 	sslCertPathFlag   string
@@ -74,7 +75,7 @@ func main() {
 	radius_address = viper.GetString("radius.address")
 
 	// Create a Gin router
-	gin.SetMode(gin.ReleaseMode)
+	//gin.SetMode(gin.ReleaseMode)
 	r := gin.Default()
 
 	// Routes
@@ -125,7 +126,16 @@ func startTcpdump(c *gin.Context) {
 		return
 	}
 
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
+
+	pcapFilename := baseDirFlag + "/" + requestData["pcap_filename"]
+	if pcapFilename == baseDirFlag+"/" {
+		pcapFilename = baseDirFlag + "/capture.pcap"
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -137,10 +147,7 @@ func startTcpdump(c *gin.Context) {
 
 		// Session exists and is not running, repopulate and restart
 		session.tcpdumpOptionsFlag = requestData["tcpdump_options"]
-		session.pcapFilename = baseDirFlag + "/" + requestData["pcap_filename"]
-		if session.pcapFilename == baseDirFlag+"/" {
-			session.pcapFilename = baseDirFlag + "/capture.pcap"
-		}
+		session.pcapFilename = pcapFilename
 
 		err := session.startTcpdump()
 
@@ -153,13 +160,13 @@ func startTcpdump(c *gin.Context) {
 	}
 
 	// Session does not exist, create a new session and start it
-	newSession := NewTcpdumpSession(sessionName, baseDirFlag, requestData["pcap_filename"], requestData["tcpdump_options"])
+	newSession := NewTcpdumpSession(sessionName, baseDirFlag, pcapFilename, requestData["tcpdump_options"])
 
 	// Add the new session to the map
-	tcpdumpSessions[sessionName] = *newSession
+	tcpdumpSessions[sessionName] = newSession
 
 	// Start tcpdump command
-	err := newSession.startTcpdump()
+	err = newSession.startTcpdump()
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "tcpdump session started", "pcap_filename": newSession.pcapFilename})
 	} else {
@@ -167,15 +174,22 @@ func startTcpdump(c *gin.Context) {
 	}
 }
 
-func getUsernameSessionName(c *gin.Context) string {
+func getUsernameSessionName(c *gin.Context) (string, error) {
 	username, _, hasAuth := c.Request.BasicAuth()
-	sessionName, exists := c.GetPostForm("session_name")
-
-	if !hasAuth || !exists {
-		return "" // Return an empty string or handle as needed based on your requirements
+	if !hasAuth {
+		return "", errors.New("basic authentication is required")
 	}
 
-	return username + "." + sessionName
+	// Try to get session_name from URL query parameters
+	sessionName := c.Query("session_name")
+	if sessionName == "" {
+		return "", errors.New("session_name is required")
+	}
+
+	// Debug prints
+	fmt.Printf("username: %s, hasAuth: %v, sessionName: %s\n", username, hasAuth, sessionName)
+
+	return username + "." + sessionName, nil
 }
 
 func (s *tcpdumpSession) startTcpdump() error {
@@ -206,7 +220,11 @@ func stopTcpdump(c *gin.Context) {
 		return
 	}
 
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -256,7 +274,11 @@ func downloadPcap(c *gin.Context) {
 		return
 	}
 
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -298,7 +320,11 @@ func deletePcap(c *gin.Context) {
 		return
 	}
 
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -343,7 +369,11 @@ func getFilesize(c *gin.Context) {
 		return
 	}
 
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -383,7 +413,11 @@ func getDuration(c *gin.Context) {
 	}
 
 	// Get the sessionName from the request
-	sessionName := getUsernameSessionName(c)
+	sessionName, err := getUsernameSessionName(c)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"status": "error", "message": err.Error()})
+		return
+	}
 
 	// Check if the session exists
 	if session, exists := tcpdumpSessions[sessionName]; exists {
@@ -419,21 +453,20 @@ func listSessions(c *gin.Context) {
 		return
 	}
 
-	username, _, hasAuth := c.Request.BasicAuth()
-	if !hasAuth {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
+	username, _, _ := c.Request.BasicAuth()
 
 	// Create a list to store session details
-	var sessionsList []gin.H
+	var sessionsList []*gin.H
 
+	//fmt.Println("The number of sessions in the map is", len(tcpdumpSessions))
 	// Iterate over tcpdumpSessions to find sessions started by the user
 	for sessionName, session := range tcpdumpSessions {
+		//fmt.Printf("sessionName = %q, session = %+v\n", sessionName, session)
 		// Check if the sessionName starts with the RADIUS username
 		if strings.HasPrefix(sessionName, username+".") {
 			// Build a map with session details
-			sessionDetails := gin.H{
+			//fmt.Println("Got", sessionName)
+			sessionDetails := &gin.H{
 				"session_name":    sessionName,
 				"pcap_filename":   session.pcapFilename,
 				"tcpdump_options": session.tcpdumpOptionsFlag,
@@ -464,7 +497,7 @@ func getStorageSpace(c *gin.Context) {
 	}
 
 	// Get the baseDir path
-	baseDir := viper.GetString("baseDir")
+	baseDir := baseDirFlag
 
 	// Get the volume path for baseDir
 	volumePath := getVolumePath(baseDir)
