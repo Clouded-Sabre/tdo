@@ -19,8 +19,11 @@
 # Set the target platforms
 platforms=("linux/amd64" "linux/arm64")
 
+# Set the version number
+version="v0.9.0"
+
 # Set the output directory
-output_dir="build"
+output_dir="build/$version"
 
 # Set the name of your Go application
 app_name="tdo_agent"
