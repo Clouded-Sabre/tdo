@@ -44,6 +44,7 @@ var (
 	radius_secret     string
 	radius_address    string
 	testHttpsFlag     bool // enable/disable the test HTTPS endpoint
+	ginInTesting      = true
 )
 
 type tcpdumpSession struct {
@@ -91,7 +92,9 @@ func main() {
 	radius_address = viper.GetString("radius.address")
 
 	// Create a Gin router
-	//gin.SetMode(gin.ReleaseMode)
+	if !ginInTesting {
+		gin.SetMode(gin.ReleaseMode)
+	}
 	r := gin.Default()
 
 	// Routes

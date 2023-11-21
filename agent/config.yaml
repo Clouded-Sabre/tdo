@@ -7,6 +7,7 @@ app:
   sslcert: "cert/certificate.crt"
   sslkey: "cert/private.key"
   testhttps: false
+  ginintesting: true
 
 # RADIUS settings
 radius:

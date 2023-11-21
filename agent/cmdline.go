@@ -27,6 +27,7 @@ import (
 func printUsage() {
 	fmt.Println("Usage:")
 	fmt.Println("Since tcpdump needs root privilege, you have to run this program as root or sudoer")
+	fmt.Printf("  --version\t\tShow version information (current version: %s)\n", version)
 	fmt.Println("  --help\t\tShow help message")
 	fmt.Println("  -basedir string\tBase directory for pcap files (default \"/home/rodger/capture\")")
 	fmt.Println("  -port string\tListening address for the API (default \"0.0.0.0:18443\")")
@@ -39,6 +40,7 @@ func parseCommandLineArguments() *bool {
 	// Define command-line flags
 
 	helpFlag := flag.Bool("help", false, "Show help message")
+	versionFlag := flag.Bool("version", false, "Show version information")
 	flag.StringVar(&baseDirFlag, "basedir", "", "Base directory for pcap files")
 	flag.StringVar(&listenAddressFlag, "port", "", "Listening address for the API")
 	flag.StringVar(&sslCertPathFlag, "sslcert", "", "Path to SSL certificate file")
@@ -46,6 +48,11 @@ func parseCommandLineArguments() *bool {
 	var testHttpsFlagString string
 	flag.StringVar(&testHttpsFlagString, "testhttps", "", "Enable/disable the test HTTPS endpoint")
 	flag.Parse()
+
+	if *versionFlag {
+		fmt.Printf("Version: %s\n", version)
+		return versionFlag
+	}
 
 	if baseDirFlag == "" {
 		baseDirFlag = viper.GetString("app.basedir")

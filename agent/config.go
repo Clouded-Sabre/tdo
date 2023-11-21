@@ -22,6 +22,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+var version = "0.9.0"
+
 func loadDefaultConfiguration() {
 	// Set default values for configuration parameters
 	viper.SetDefault("radius.secret", "testing123")
@@ -31,6 +33,7 @@ func loadDefaultConfiguration() {
 	viper.SetDefault("app.sslcert", "cert/certificate.crt")
 	viper.SetDefault("app.sslkey", "cert/private.key")
 	viper.SetDefault("app.testhttps", false)
+	viper.SetDefault("app.ginintesting", true)
 }
 
 // loadConfiguration loads configuration from a file using Viper
@@ -47,4 +50,6 @@ func loadConfigurationFromFile() {
 	if err != nil {
 		log.Fatalf("Error reading configuration file: %s", err)
 	}
+
+	ginInTesting = viper.GetBool("app.ginintesting")
 }
