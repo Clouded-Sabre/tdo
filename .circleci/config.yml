@@ -20,7 +20,7 @@ jobs:
 
       - run: 
           name: Compile the binary
-          command: cd tdo/agent && go build -o tdo_agent .
+          command: cd /home/circleci/project/tdo/agent && go build -o tdo_agent .
 
 workflows:
   version: 2
