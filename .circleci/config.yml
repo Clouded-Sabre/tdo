@@ -6,7 +6,7 @@ jobs:
       - image: golang:latest
 
     steps:
-      - checkout
+      - checkout:
         path: /home/circleci/project/tdo
       #- run: go test
 
