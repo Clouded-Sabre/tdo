@@ -31,9 +31,6 @@ app_name="tdo_agent"
 # Create the output directory if it doesn't exist
 mkdir -p "$output_dir"
 
-# Change to the 'agent' directory
-cd "$(dirname "$0")/agent" || exit
-
 # Iterate over the target platforms and compile the binary
 for platform in "${platforms[@]}"; do
     # Split the platform string into OS and architecture

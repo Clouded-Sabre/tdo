@@ -3,12 +3,16 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: circleci/golang:1.17
+      - image: golang:latest
+
+    working_directory: /home/circleci/project/agent
 
     steps:
       - checkout
       #- run: go test
-      - run: agent/build.sh
+      - run: 
+          name: Compile the binary
+          command: go build -o tdo_agent .
 
 workflows:
   version: 2
