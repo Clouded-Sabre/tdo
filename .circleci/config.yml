@@ -7,11 +7,12 @@ jobs:
 
     steps:
       - checkout
+        path: /home/circleci/project/tdo
       #- run: go test
 
       - run:
           name: Print directory structure
-          command: ls -R /home/circleci
+          command: ls -R /home/circleci/project
 
       - run: 
           name: Compile the binary
