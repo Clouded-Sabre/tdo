@@ -5,8 +5,6 @@ jobs:
     docker:
       - image: circleci/golang:1.17
 
-    working_directory: /home/circleci/project/agent
-
     steps:
       - checkout
       #- run: go test
