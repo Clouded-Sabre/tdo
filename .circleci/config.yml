@@ -14,9 +14,13 @@ jobs:
           name: Print directory structure
           command: ls -R /home/circleci/project
 
+      - run:
+          name: show current directory
+          command: cd
+
       - run: 
           name: Compile the binary
-          command: cd agent && go build -o tdo_agent .
+          command: cd tdo/agent && go build -o tdo_agent .
 
 workflows:
   version: 2
