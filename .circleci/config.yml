@@ -11,7 +11,7 @@ jobs:
 
       - run:
           name: Print directory structure
-          command: ls -R /home/circleci/project
+          command: ls -R /home/circleci
 
       - run: 
           name: Compile the binary
