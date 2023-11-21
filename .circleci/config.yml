@@ -7,7 +7,7 @@ jobs:
 
     steps:
       - checkout:
-        path: /home/circleci/project/tdo
+          path: /home/circleci/project/tdo
       #- run: go test
 
       - run:
