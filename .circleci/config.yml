@@ -16,7 +16,7 @@ jobs:
 
       - run:
           name: show current directory
-          command: cd
+          command: pwd
 
       - run: 
           name: Compile the binary
