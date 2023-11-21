@@ -46,7 +46,7 @@ for platform in "${platforms[@]}"; do
     output_file="$output_dir/${app_name}_${os}_${arch}"
 
     # Compile the binary
-    go build -o "$output_file" *.go  # replace main.go with your main file
+    go build -o "$output_file" .  
 
     # Check if the compilation was successful
     if [ $? -eq 0 ]; then
