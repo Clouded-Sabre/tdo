@@ -6,21 +6,17 @@ jobs:
       - image: golang:latest
 
     steps:
-      - checkout:
-          path: /home/circleci/project/tdo
-      #- run: go test
-
-      - run:
-          name: Print directory structure
-          command: ls -R /home/circleci/project
+      - checkout
 
       - run:
           name: show current directory
-          command: pwd
+          command: pwd && ls -R
 
-      - run: 
-          name: Compile the binary
-          command: cd /home/circleci/project/tdo/agent && go build -o tdo_agent .
+      #- run: go test
+
+      #- run: 
+      #    name: Compile the binary
+      #    command: cd /home/circleci/project/tdo/agent && go build -o tdo_agent .
 
 workflows:
   version: 2
