@@ -16,7 +16,7 @@ jobs:
 
       - run: 
           name: Compile the binary
-          command: cd agent && go build -o tdo_agent .
+          command: cd agent && ./build.sh
 
 workflows:
   version: 2
