@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -51,7 +52,7 @@ func parseCommandLineArguments() *bool {
 
 	if *versionFlag {
 		fmt.Printf("Version: %s\n", version)
-		return versionFlag
+		os.Exit(0)
 	}
 
 	if baseDirFlag == "" {
