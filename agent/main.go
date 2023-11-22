@@ -45,6 +45,8 @@ var (
 	radius_address    string
 	testHttpsFlag     bool // enable/disable the test HTTPS endpoint
 	ginInTesting      = true
+
+	version string
 )
 
 type tcpdumpSession struct {

@@ -22,8 +22,6 @@ import (
 	"github.com/spf13/viper"
 )
 
-var version = "0.9.0"
-
 func loadDefaultConfiguration() {
 	// Set default values for configuration parameters
 	viper.SetDefault("radius.secret", "testing123")
