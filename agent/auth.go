@@ -25,6 +25,19 @@ import (
 	"layeh.com/radius/rfc2865"
 )
 
+// set the interface for RADIUS client so that it's easy to be mocked in testing
+type RadiusClient interface {
+	Exchange(theContext context.Context, packet *radius.Packet, radius_address string) (response *radius.Packet, err error)
+}
+
+type radiusClient struct{}
+
+func (radiusClient) Exchange(theContext context.Context, packet *radius.Packet, radius_address string) (response *radius.Packet, err error) {
+	return radius.Exchange(theContext, packet, radius_address)
+}
+
+var theRadiusClient RadiusClient
+
 func authenticateUser(c *gin.Context) bool {
 	username, password, hasAuth := c.Request.BasicAuth()
 
@@ -36,7 +49,7 @@ func authenticateUser(c *gin.Context) bool {
 	packet := radius.New(radius.CodeAccessRequest, []byte(radius_secret))
 	rfc2865.UserName_SetString(packet, username)
 	rfc2865.UserPassword_SetString(packet, password)
-	response, err := radius.Exchange(context.Background(), packet, radius_address)
+	response, err := theRadiusClient.Exchange(context.Background(), packet, radius_address)
 
 	if err != nil {
 		log.Printf("RADIUS exchange error: %v", err)
@@ -49,4 +62,24 @@ func authenticateUser(c *gin.Context) bool {
 	}
 
 	return true
+}
+
+// Function to check if a RADIUS server is reachable by sending a RADIUS Access-Request packet
+func isRadiusServerReachable() bool {
+	// Use RADIUS for authentication
+	packet := radius.New(radius.CodeAccessRequest, []byte(radius_secret))
+	rfc2865.UserName_SetString(packet, "123")     // arbitrary username
+	rfc2865.UserPassword_SetString(packet, "456") // arbitrary password
+
+	_, err := theRadiusClient.Exchange(context.Background(), packet, radius_address)
+	if err != nil {
+		log.Println("Error:", err)
+		log.Println("Either RADIUS is not reachable or your RADIUS secret is not correct.")
+		return false
+	}
+
+	// Check if the response is successful (you may need to customize this based on the library)
+	log.Println("RADIUS server is reachable")
+	return true
+
 }

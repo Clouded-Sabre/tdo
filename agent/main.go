@@ -22,7 +22,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -49,26 +48,6 @@ var (
 	version string
 )
 
-type tcpdumpSession struct {
-	isRunning           bool
-	tcpdumpCmd          *exec.Cmd
-	tcpdumpOptionsFlag  string
-	pcapFilename        string
-	StartTime, stopTime time.Time
-}
-
-func NewTcpdumpSession(name, baseDirFlag, pcapFilename, tcpdumpOptionsFlag string) *tcpdumpSession {
-	session := &tcpdumpSession{
-		isRunning:          false,
-		tcpdumpCmd:         nil,
-		tcpdumpOptionsFlag: tcpdumpOptionsFlag,
-		pcapFilename:       pcapFilename,
-		StartTime:          time.Time{}, // Zero value for time.Time indicates an uninitialized time
-	}
-
-	return session
-}
-
 func main() {
 	// Load default configuration
 	loadDefaultConfiguration()
@@ -90,8 +69,17 @@ func main() {
 		os.Exit(0)
 	}
 
+	theRadiusClient = &radiusClient{}
+
 	radius_secret = viper.GetString("radius.secret")
 	radius_address = viper.GetString("radius.address")
+
+	if !isRadiusServerReachable() {
+		log.Println("RADIUS server is not reachable. Please check!")
+		os.Exit(0)
+	}
+
+	cmdShell = LocalShell{}
 
 	// Create a Gin router
 	if !ginInTesting {
@@ -99,18 +87,21 @@ func main() {
 	}
 	r := gin.Default()
 
+	// Apply the BasicAuthMiddleware to all relevant routes in the group
+	authGroup := r.Group("/", BasicAuthMiddleware)
+
 	// Routes
-	r.POST("/start_tcpdump", startTcpdump)
-	r.POST("/stop_tcpdump", stopTcpdump)
-	r.GET("/download_pcap", downloadPcap)
-	r.POST("/delete_pcap", deletePcap)
-	r.GET("/list_sessions", listSessions)
-	r.GET("/get_filesize", getFilesize)          // report pcap file size
-	r.GET("/get_duration", getDuration)          // report capture session duration
-	r.GET("/get_storage_space", getStorageSpace) // report available storage space
+	authGroup.POST("/v1/start_tcpdump", startTcpdump)
+	authGroup.POST("/v1/stop_tcpdump", stopTcpdump)
+	authGroup.GET("/v1/download_pcap", downloadPcap)
+	authGroup.POST("/v1/delete_pcap", deletePcap)
+	authGroup.GET("/v1/list_sessions", listSessions)
+	authGroup.GET("/v1/get_filesize", getFilesize)          // report pcap file size
+	authGroup.GET("/v1/get_duration", getDuration)          // report capture session duration
+	authGroup.GET("/v1/get_storage_space", getStorageSpace) // report available storage space
 	if testHttpsFlag {
-		r.GET("/test_https", testHttps)   // Add the new route for testing HTTPS
-		r.GET("/test_radius", testRadius) // Add the new route for testing RADIUS+HTTPS
+		r.GET("/test_https", testHttps)           // Add the new route for testing HTTPS
+		authGroup.GET("/test_radius", testRadius) // Add the new route for testing RADIUS+HTTPS
 	}
 
 	// Create a new HTTPS server
@@ -130,16 +121,24 @@ func main() {
 	select {}
 }
 
+// BasicAuthMiddleware is a middleware function for basic authentication
+func BasicAuthMiddleware(c *gin.Context) {
+	_, _, ok := c.Request.BasicAuth()
+
+	// Authenticate the user using your existing logic
+	if !ok || !authenticateUser(c) {
+		c.Header("WWW-Authenticate", "Basic realm=Restricted")
+		c.AbortWithStatus(http.StatusUnauthorized)
+		return
+	}
+
+	c.Next()
+}
+
 func startTcpdump(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent start requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using basic authentication
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	var requestData map[string]string
 	if err := c.ShouldBindJSON(&requestData); err != nil {
@@ -170,7 +169,7 @@ func startTcpdump(c *gin.Context) {
 		session.tcpdumpOptionsFlag = requestData["tcpdump_options"]
 		session.pcapFilename = pcapFilename
 
-		err := session.startTcpdump()
+		err := session.startTcpdump(sessionName)
 
 		if err == nil {
 			c.JSON(http.StatusOK, gin.H{"status": "success", "message": "tcpdump session restarted", "pcap_filename": session.pcapFilename})
@@ -187,7 +186,7 @@ func startTcpdump(c *gin.Context) {
 	tcpdumpSessions[sessionName] = newSession
 
 	// Start tcpdump command
-	err = newSession.startTcpdump()
+	err = newSession.startTcpdump(sessionName)
 	if err == nil {
 		c.JSON(http.StatusOK, gin.H{"status": "success", "message": "tcpdump session started", "pcap_filename": newSession.pcapFilename})
 	} else {
@@ -207,39 +206,46 @@ func getUsernameSessionName(c *gin.Context) (string, error) {
 		return "", errors.New("session_name is required")
 	}
 
-	// Debug prints
-	fmt.Printf("username: %s, hasAuth: %v, sessionName: %s\n", username, hasAuth, sessionName)
-
 	return username + "." + sessionName, nil
 }
 
-func (s *tcpdumpSession) startTcpdump() error {
-	s.tcpdumpCmd = exec.Command("/usr/bin/tcpdump", strings.Fields(s.tcpdumpOptionsFlag)...)
-	s.tcpdumpCmd.Args = append(s.tcpdumpCmd.Args, "-w", s.pcapFilename)
-
-	if err := s.tcpdumpCmd.Start(); err != nil {
-		log.Printf("Failed to start tcpdump for session %v: %v", s.pcapFilename, err)
+func (s *tcpdumpSession) startTcpdump(sessionName string) error {
+	// start the tcpdump command
+	tcpdumpCmd, err := cmdShell.Execute(s.tcpdumpOptionsFlag, s.pcapFilename, sessionName)
+	if err != nil {
+		log.Printf("Failed to start tcpdump for session %v: %v", sessionName, err)
 		return err
 	}
 
-	s.isRunning = true
-	s.StartTime = time.Now()
-	s.stopTime = time.Time{}
+	// Sleep for a short duration to see if the process can sustain
+	time.Sleep(100 * time.Millisecond)
 
-	log.Printf("tcpdump started for session %v", s.pcapFilename)
-	return nil
+	// check if tcpdump is actually running or not.
+	isTcpdumpRunning, err := cmdShell.isProcessRunning(tcpdumpCmd)
+	if err != nil {
+		log.Println("Failed to check if tcpdump process is running.")
+		log.Println("Error:", err.Error())
+		return err
+	} else {
+		if isTcpdumpRunning {
+			s.tcpdumpCmd = tcpdumpCmd
+			s.isRunning = true
+			s.StartTime = time.Now()
+			s.stopTime = time.Time{}
+
+			log.Printf("tcpdump started for session %v", sessionName)
+			return nil
+		} else {
+			err = fmt.Errorf("tcpdump failed to start")
+			return err
+		}
+	}
 }
 
 func stopTcpdump(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent stop requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using basic authentication
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	sessionName, err := getUsernameSessionName(c)
 	if err != nil {
@@ -252,7 +258,7 @@ func stopTcpdump(c *gin.Context) {
 		// Session exists, check if it is running
 		if session.isRunning {
 			// Stop the tcpdump session
-			err := session.stopTcpdump()
+			err := session.stopTcpdump(sessionName)
 
 			if err == nil {
 				c.JSON(http.StatusOK, gin.H{"status": "success", "message": "tcpdump session stopped"})
@@ -267,20 +273,20 @@ func stopTcpdump(c *gin.Context) {
 	}
 
 	// Session does not exist
-	c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "tcpdump session not found"})
+	c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "tcpdump session not found"})
 }
 
-func (s *tcpdumpSession) stopTcpdump() error {
+func (s *tcpdumpSession) stopTcpdump(sessionName string) error {
 	// Stop the tcpdump process
-	if err := s.tcpdumpCmd.Process.Kill(); err != nil {
-		log.Printf("Failed to stop tcpdump for session %v: %v", s.pcapFilename, err)
+	if err := cmdShell.ProcessKill(s.tcpdumpCmd, sessionName); err != nil {
+		log.Printf("Failed to stop tcpdump for session %v: %v", sessionName, err)
 		return err
 	}
 
 	s.isRunning = false
 	s.stopTime = time.Now()
 
-	log.Printf("tcpdump stopped for session %v", s.pcapFilename)
+	log.Printf("tcpdump stopped for session %v", sessionName)
 	return nil
 }
 
@@ -288,12 +294,6 @@ func downloadPcap(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using RADIUS
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	sessionName, err := getUsernameSessionName(c)
 	if err != nil {
@@ -313,7 +313,7 @@ func downloadPcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
 			return
 		}
 
@@ -327,19 +327,13 @@ func downloadPcap(c *gin.Context) {
 	}
 
 	// Session does not exist
-	c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "tcpdump session not found"})
+	c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "tcpdump session not found"})
 }
 
 func deletePcap(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using RADIUS
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	sessionName, err := getUsernameSessionName(c)
 	if err != nil {
@@ -359,13 +353,13 @@ func deletePcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
 			return
 		}
 
 		// Delete the pcap file
 		if err := os.Remove(session.pcapFilename); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Error while deleting the pcapfile: " + err.Error()})
 			return
 		}
 
@@ -376,19 +370,13 @@ func deletePcap(c *gin.Context) {
 	}
 
 	// Session does not exist
-	c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "tcpdump session not found"})
+	c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "tcpdump session not found"})
 }
 
 func getFilesize(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using RADIUS
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	sessionName, err := getUsernameSessionName(c)
 	if err != nil {
@@ -401,7 +389,7 @@ func getFilesize(c *gin.Context) {
 		// Session exists, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
 			return
 		}
 
@@ -419,19 +407,13 @@ func getFilesize(c *gin.Context) {
 	}
 
 	// Session does not exist
-	c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "tcpdump session not found"})
+	c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "tcpdump session not found"})
 }
 
 func getDuration(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using RADIUS
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	// Get the sessionName from the request
 	sessionName, err := getUsernameSessionName(c)
@@ -459,7 +441,7 @@ func getDuration(c *gin.Context) {
 		}
 	} else {
 		// Session does not exist, report error to client
-		c.JSON(http.StatusNotFound, gin.H{"status": "error", "message": "Session not found"})
+		c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Session not found"})
 	}
 }
 
@@ -467,12 +449,6 @@ func listSessions(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent access to tcpdumpSessions
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using basic authentication
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	username, _, _ := c.Request.BasicAuth()
 
@@ -510,12 +486,6 @@ func getStorageSpace(c *gin.Context) {
 	// Acquire the mutex to prevent concurrent requests
 	mutex.Lock()
 	defer mutex.Unlock()
-
-	// Authenticate the user using RADIUS
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
 
 	// Get the baseDir path
 	baseDir := baseDirFlag
@@ -568,11 +538,5 @@ func testHttps(c *gin.Context) {
 }
 
 func testRadius(c *gin.Context) {
-	// Authenticate the user using basic authentication
-	if !authenticateUser(c) {
-		c.JSON(http.StatusUnauthorized, gin.H{"status": "error", "message": "Unauthorized"})
-		return
-	}
-
 	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Test RADIUS communication successful"})
 }
