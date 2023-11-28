@@ -100,8 +100,8 @@ func main() {
 	authGroup.GET("/v1/get_duration", getDuration)          // report capture session duration
 	authGroup.GET("/v1/get_storage_space", getStorageSpace) // report available storage space
 	if testHttpsFlag {
-		r.GET("/test_https", testHttps)           // Add the new route for testing HTTPS
-		authGroup.GET("/test_radius", testRadius) // Add the new route for testing RADIUS+HTTPS
+		r.GET("/test_https", testHttps)           // for testing HTTPS
+		authGroup.GET("/test_radius", testRadius) // for testing RADIUS+HTTPS
 	}
 
 	// Create a new HTTPS server
