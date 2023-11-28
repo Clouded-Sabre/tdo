@@ -20,6 +20,15 @@ jobs:
           name: Compile the binary
           command: cd agent && ./build.sh
 
+  freeradius_job:
+    docker:
+      - image: freeradius/freeradius-server:latest
+    steps:
+      - checkout
+      - run:
+          name: Run FreeRADIUS Tests or Setup
+          command: pwd
+
 workflows:
   version: 2
   build:
