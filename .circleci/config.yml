@@ -2,7 +2,7 @@ version: 2.1
 
 jobs:
   build:
-    docker:
+    machine: ubuntu-2204:current
       - image: golang:latest
 
     steps:
@@ -12,7 +12,9 @@ jobs:
       #    name: show current directory
       #    command: pwd && ls -R
 
-      #- run: go test
+      - run: 
+          name: unit test
+          command: cd agent && go test
 
       - run: 
           name: Compile the binary
