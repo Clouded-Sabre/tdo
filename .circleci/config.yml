@@ -30,11 +30,17 @@ jobs:
             docker exec freeradius-container ls -l /etc/freeradius/ && docker exec freeradius-container tail -n 5 /etc/freeradius/clients.conf
             docker exec freeradius-container tail -n 5 /etc/freeradius/users
       - run:
-          name: Set FreeRADIUS IP address as environment variable
-          command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
+          name: Prepare agent config file by using real FreeRadius IP
+          command: |
+            echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
+            cp agent/tests/config.yaml.template agent/build/config.yaml
+            sed -i "s|<RADIUS_IP>|$FREERADIUS_IP|g" agent/build/config.yaml
       - run:
           name: Start tdo agent
-          command: pwd && ./agent/build/tdo_agent_linux_amd64 &
+          command: |
+            pwd
+            ./agent/build/tdo_agent_linux_amd64 &
+            ss -tnlp | grep 443
       - run:
           name: Run integration tests
           #command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
