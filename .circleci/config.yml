@@ -27,8 +27,8 @@ jobs:
       - run:
           name: Print last 5 lines of clients.conf
           command: |
-            docker exec freeradius-container ls -lR /etc/freeradius/ && docker exec freeradius-container tail -n 5 /etc/freeradius/3.0/clients.conf
-            docker exec freeradius-container tail -n 5 /etc/freeradius/3.0/users
+            docker exec freeradius-container ls -l /etc/freeradius/ && docker exec freeradius-container tail -n 5 /etc/freeradius/clients.conf
+            docker exec freeradius-container tail -n 5 /etc/freeradius/users
       - run:
           name: Set FreeRADIUS IP address as environment variable
           command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
