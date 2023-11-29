@@ -19,14 +19,14 @@ jobs:
   freeradius_job:
     docker:
       - image: freeradius/freeradius-server:latest
-    steps:
-      - checkout
-      - run:
-          name: Run FreeRADIUS Tests or Setup
-          command: pwd
+    steps: 
+      run:
+        name: Run FreeRADIUS check
+        command: ip address && ss -unlp
 
 workflows:
   version: 2
   build:
     jobs:
       - build
+      - freeradius_job
