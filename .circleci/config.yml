@@ -11,7 +11,7 @@ jobs:
           command: cd agent && go test
       - run:
           name: Compile the binary
-          command: cd agent && ./build.sh
+          command: cd agent && ./tests/build.sh && ls build
       - run:
           name: Modify client.conf file
           command: |
@@ -21,9 +21,9 @@ jobs:
       - run:
           name: Start FreeRADIUS Docker container
           command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/users -p 1812:1812/udp freeradius/freeradius-server:latest
-      - run:
-          name: Find Freeradius Configuration Files
-          command: docker exec freeradius-container find /etc/ -type f -name 'users' -o -name 'clients.conf'
+      #- run:
+      #    name: Find Freeradius Configuration Files
+      #    command: docker exec freeradius-container find /etc/ -type f -name 'users' -o -name 'clients.conf'
       - run:
           name: Print last 5 lines of clients.conf
           command: |
@@ -33,8 +33,12 @@ jobs:
           name: Set FreeRADIUS IP address as environment variable
           command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
       - run:
+          name: Start tdo agent
+          command: ./build/tdo_agent_linux_amd64 &
+      - run:
           name: Run integration tests
-          command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
+          #command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
+          command: ./tests/prepare_python.sh
       - run:
           name: Stop FreeRADIUS Docker container
           command: docker stop freeradius-container && docker rm freeradius-container
