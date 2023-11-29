@@ -39,7 +39,7 @@ jobs:
             sed -i "s|<RADIUS_IP>|$FREERADIUS_IP|g" agent/build/config.yaml
             cat agent/build/config.yaml
       - run:
-          name: Start tdo agent
+          name: Start tdo agent and run integration tests
           command: |
             pwd
             cd agent/build
@@ -48,16 +48,13 @@ jobs:
             sudo ./tdo_agent_linux_amd64 &
             echo "Wait 10 seconds for the agent to be started."
             sleep 10  # Introduce a 10-second delay
+            echo "Checking if HTTPS port is available"
             ss -tnlp | grep 443
-      - run:
-          name: Run integration tests
-          #command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
-          command: |
+            echo "Start integration tests"
             export VM_IP=127.0.0.1            
             echo "VM_IP: $VM_IP" 
-            cat agent/build/output.log
             pwd && cd agent/tests
-            ./prepare_python.sh
+            ./prepare_python.sh     
       - run:
           name: Stop FreeRADIUS Docker container
           command: docker stop freeradius-container && docker rm freeradius-container
