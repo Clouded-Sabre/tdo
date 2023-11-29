@@ -14,7 +14,7 @@ jobs:
           command: cd agent && ./build.sh
       - run:
           name: Modify client.conf file
-          command: export VM_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}') && tac agent/tests/clients.conf.good | awk -v ip="$VM_IP" '/ipaddr *=/ && !changed {sub(/ipaddr *=.*/, "ipaddr = " ip); changed=1} 1' | tac > agent/tests/clients.conf
+          command: export VM_IP=$(ip addr show eth0 | grep -oP '(?<=inet\s)\d+(\.\d+){3}') && echo "VM_IP: $VM_IP" && tac agent/tests/clients.conf.good | awk -v ip="$VM_IP" '/ipaddr *=/ && !changed {sub(/ipaddr *=.*/, "ipaddr = " ip); changed=1} 1' | tac > agent/tests/clients.conf
       - run:
           name: Start FreeRADIUS Docker container
           command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/3.0/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/3.0/users -p 1812:1812/udp freeradius/freeradius-server:latest
