@@ -108,31 +108,6 @@ func main() {
 
 	log.Println("Creating Gin Server......")
 
-	/*// Create a new HTTPS server
-	server := &http.Server{
-		Addr:    listenAddressFlag,
-		Handler: r,
-	}
-
-	log.Println("Starting Gin Server......")
-
-	// Start the server in a goroutine
-	go func() {
-		err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag)
-		if err != nil {
-			if err == http.ErrServerClosed {
-				log.Printf("http.ErrServerClosed error: %v\n", err)
-			} else {
-				log.Fatalf("ListenAndServeTLS: %v", err)
-			}
-		}
-	}()
-
-	log.Println("Gin Server started......")
-
-	// Wait for a control-c signal to exit
-	select {}*/
-
 	r.RunTLS(listenAddressFlag, sslCertPathFlag, sslKeyPathFlag)
 }
 
@@ -328,7 +303,7 @@ func downloadPcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
 
@@ -368,7 +343,7 @@ func deletePcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
 
@@ -404,7 +379,7 @@ func getFilesize(c *gin.Context) {
 		// Session exists, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found"})
+			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
 
