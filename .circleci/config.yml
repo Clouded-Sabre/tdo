@@ -53,11 +53,15 @@ jobs:
             echo "Start integration tests"
             export VM_IP=127.0.0.1            
             echo "VM_IP: $VM_IP" 
-            pwd && cd agent/tests
-            ./prepare_python.sh     
+            pwd && cd ../tests
+            ./prepare_python.sh
+            echo "integration tests completed. Clean up now ......."
+            pkill -9 -f tdo_agent_linux_amd64    
       - run:
           name: Stop FreeRADIUS Docker container
-          command: docker stop freeradius-container && docker rm freeradius-container
+          command: |
+            echo "clean up freeradius docker container..."
+            docker stop freeradius-container && docker rm freeradius-container
 
 workflows:
   version: 2
