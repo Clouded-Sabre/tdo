@@ -34,11 +34,11 @@ jobs:
           command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
       - run:
           name: Start tdo agent
-          command: pwd && ./build/tdo_agent_linux_amd64 &
+          command: pwd && ./agent/build/tdo_agent_linux_amd64 &
       - run:
           name: Run integration tests
           #command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
-          command: pwd && ./tests/prepare_python.sh
+          command: pwd && ./agent/tests/prepare_python.sh
       - run:
           name: Stop FreeRADIUS Docker container
           command: docker stop freeradius-container && docker rm freeradius-container
