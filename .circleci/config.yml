@@ -46,6 +46,7 @@ jobs:
             mkdir capture
             ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             sudo ss -tnlp
+            ip address
             sudo ./tdo_agent_linux_amd64 &
             echo "Wait 10 seconds for the agent to be started."
             sleep 10  # Introduce a 10-second delay
