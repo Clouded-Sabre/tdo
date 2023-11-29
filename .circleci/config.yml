@@ -19,9 +19,18 @@ jobs:
   freeradius_job:
     docker:
       - image: freeradius/freeradius-server:latest
-    steps: 
-      run:
-        name: Run FreeRADIUS check
+    steps:
+      - checkout
+      #- run:
+      #    name: Copy FreeRADIUS Config
+      #    command: cp -r /path/to/your/freeradius/config/* /etc/freeradius/
+
+      #- run:
+      #    name: Restart FreeRADIUS
+      #    command: service freeradius restart
+
+      - run:
+        name: check environment
         command: ip address && ss -unlp
 
 workflows:
