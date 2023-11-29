@@ -8,10 +8,6 @@ jobs:
     steps:
       - checkout
 
-      #- run:
-      #    name: show current directory
-      #    command: pwd && ls -R
-
       - run: 
           name: unit test
           command: cd agent && go test
