@@ -3,7 +3,7 @@ version: 2.1
 jobs:
   build:
     machine:
-      - image: ubuntu-2204:current
+      image: ubuntu-2204:current
     steps:
       - checkout
       - run:
@@ -23,8 +23,7 @@ jobs:
           command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
       - run:
           name: Run integration tests
-          #command: cd agent && ./integration_tests.sh  # Replace with the actual command for your integration tests
-          command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
+          command: docker exec -it freeradius-container bash -c 'echo "radtest testuser testpassword localhost 0 testing123" | radclient -x localhost auth testing123'
       - run:
           name: Stop FreeRADIUS Docker container
           command: docker stop freeradius-container && docker rm freeradius-container
