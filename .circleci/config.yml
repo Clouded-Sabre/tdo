@@ -55,6 +55,7 @@ jobs:
             export VM_IP=127.0.0.1            
             echo "VM_IP: $VM_IP" 
             pwd && cd ../tests
+            mkdir capture
             ./prepare_python.sh
             echo "integration tests completed. Clean up now ......."
             sudo pkill -9 -f tdo_agent_linux_amd64    
