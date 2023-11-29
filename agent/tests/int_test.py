@@ -45,4 +45,4 @@ for route in routes:
 
     # Delay for one second after starting tcpdump to ensure pcap file is created
     if "/start_tcpdump" in route:
-        time.sleep(1)
+        time.sleep(5)
