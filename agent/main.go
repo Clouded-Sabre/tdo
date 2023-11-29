@@ -74,6 +74,7 @@ func main() {
 	radius_secret = viper.GetString("radius.secret")
 	radius_address = viper.GetString("radius.address")
 
+	log.Println("Checking if RADIUS server is reachable......")
 	if !isRadiusServerReachable() {
 		log.Println("RADIUS server is not reachable. Please check!")
 		os.Exit(0)
@@ -103,6 +104,8 @@ func main() {
 		r.GET("/test_https", testHttps)           // for testing HTTPS
 		authGroup.GET("/test_radius", testRadius) // for testing RADIUS+HTTPS
 	}
+
+	log.Println("Starting Gin Server......")
 
 	// Create a new HTTPS server
 	server := &http.Server{
