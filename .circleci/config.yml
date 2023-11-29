@@ -45,7 +45,7 @@ jobs:
             cd agent/build
             ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             #uname -a && lsb_release -a && cat /proc/cpuinfo && free -h
-            sudo ss -tnlp | grep 443
+            sudo ss -tnlp
             sudo ./tdo_agent_linux_amd64 &
             ss -tnlp | grep 443
       - run:
