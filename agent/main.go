@@ -303,6 +303,10 @@ func downloadPcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
+			absPath, _ := filepath.Abs(session.pcapFilename)
+			log.Println("pcap file path:", absPath)
+			currentDir, _ := os.Getwd()
+			log.Println("PWD is:", currentDir)
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
