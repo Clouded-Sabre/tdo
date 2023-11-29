@@ -108,7 +108,7 @@ func main() {
 
 	log.Println("Creating Gin Server......")
 
-	// Create a new HTTPS server
+	/*// Create a new HTTPS server
 	server := &http.Server{
 		Addr:    listenAddressFlag,
 		Handler: r,
@@ -131,7 +131,9 @@ func main() {
 	log.Println("Gin Server started......")
 
 	// Wait for a control-c signal to exit
-	select {}
+	select {}*/
+
+	r.RunTLS(listenAddressFlag, sslCertPathFlag, sslKeyPathFlag)
 }
 
 // BasicAuthMiddleware is a middleware function for basic authentication
