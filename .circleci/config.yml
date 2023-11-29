@@ -45,7 +45,7 @@ jobs:
             cd agent/build
             ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             uname -a && lsb_release -a && cat /proc/cpuinfo && free -h
-            sudo ./tdo_agent_linux_amd64 &
+            sudo nohup ./tdo_agent_linux_amd64 > output.log 2>&1 &
             ss -tnlp | grep 443
       - run:
           name: Run integration tests
@@ -53,6 +53,7 @@ jobs:
           command: |
             export VM_IP=127.0.0.1            
             echo "VM_IP: $VM_IP" 
+            cat agent/build/output.log
             pwd && cd agent/tests
             ./prepare_python.sh
       - run:
