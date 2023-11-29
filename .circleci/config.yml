@@ -20,7 +20,7 @@ jobs:
             tac agent/tests/clients.conf.good | awk -v ip="$VM_IP" '/ipaddr *=/ && !changed {sub(/ipaddr *=.*/, "ipaddr = " ip); changed=1} 1' | tac > agent/tests/clients.conf
       - run:
           name: Start FreeRADIUS Docker container
-          command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/3.0/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/3.0/users -p 1812:1812/udp freeradius/freeradius-server:latest
+          command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/users -p 1812:1812/udp freeradius/freeradius-server:latest
       - run:
           name: Find Freeradius Configuration Files
           command: docker exec freeradius-container find /etc/ -type f -name 'users' -o -name 'clients.conf'
