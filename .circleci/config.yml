@@ -59,7 +59,7 @@ jobs:
             mkdir capture
             ./prepare_python.sh
             echo "integration tests completed. Clean up now ......."
-            sudo pkill -9 -f tdo_agent_linux_amd64 > /dev/null 2>&1 || true
+            sudo pkill -2 -f tdo_agent_linux_amd64
       - run:
           name: Stop FreeRADIUS Docker container
           command: |

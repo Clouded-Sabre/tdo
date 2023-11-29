@@ -22,6 +22,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -107,8 +108,33 @@ func main() {
 	}
 
 	log.Println("Creating Gin Server......")
+	server := &http.Server{
+		Addr:    listenAddressFlag,
+		Handler: r,
+	}
 
-	r.RunTLS(listenAddressFlag, sslCertPathFlag, sslKeyPathFlag)
+	// for gracefully shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt)
+
+	go func() {
+		<-quit
+		log.Println("receive interrupt signal")
+		if err := server.Close(); err != nil {
+			log.Fatal("Server Close:", err)
+		}
+	}()
+
+	if err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag); err != nil {
+		if err == http.ErrServerClosed {
+			log.Println("Server closed under request")
+		} else {
+			log.Fatal("Server closed unexpect")
+		}
+	}
+
+	log.Println("Server exiting...")
+	//r.RunTLS(listenAddressFlag, sslCertPathFlag, sslKeyPathFlag)
 }
 
 // BasicAuthMiddleware is a middleware function for basic authentication
@@ -303,32 +329,6 @@ func downloadPcap(c *gin.Context) {
 		// Session exists and is not running, check if the pcap file exists
 		if _, err := os.Stat(session.pcapFilename); os.IsNotExist(err) {
 			// Pcap file not found
-			absPath, _ := filepath.Abs(session.pcapFilename)
-			log.Println("pcap file path:", absPath)
-			currentDir, _ := os.Getwd()
-			log.Println("PWD is:", currentDir)
-			// Check if baseDir directory exists
-			if _, err := os.Stat(baseDirFlag); os.IsNotExist(err) {
-				absBaseDir, _ := filepath.Abs(baseDirFlag)
-				log.Println("Capture Directory does not exist:", absBaseDir)
-			} else {
-				log.Println("Capture Directory exists")
-				// list all files in baseDir
-				// Walk through the directory
-				var fileList []string
-				err := filepath.Walk(baseDirFlag, func(path string, info os.FileInfo, err error) error {
-					// Add the file path to the list
-					fileList = append(fileList, path)
-
-					return nil
-				})
-
-				if err != nil {
-					log.Println("File list in capture directory:")
-					log.Println(fileList)
-				}
-			}
-
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
