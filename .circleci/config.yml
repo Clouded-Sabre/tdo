@@ -35,6 +35,7 @@ jobs:
             echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
             cp agent/tests/config.yaml.template agent/build/config.yaml
             sed -i "s|<RADIUS_IP>|$FREERADIUS_IP|g" agent/build/config.yaml
+            cat agent/build/config.yaml
       - run:
           name: Start tdo agent
           command: |
