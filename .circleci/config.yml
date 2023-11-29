@@ -30,8 +30,8 @@ jobs:
       #    command: service freeradius restart
 
       - run:
-        name: check environment
-        command: ip address && ss -unlp
+          name: check environment
+          command: ip address && ss -unlp
 
 workflows:
   version: 2
