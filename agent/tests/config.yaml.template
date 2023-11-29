@@ -2,8 +2,8 @@
 
 # Application settings
 app:
-  sslcert: "tests/cert/certificate.crt"
-  sslkey: "tests/cert/private.key"
+  sslcert: "../tests/cert/certificate.crt"
+  sslkey: "../tests/cert/private.key"
   testhttps: true
 
 # RADIUS settings
