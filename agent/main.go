@@ -307,6 +307,28 @@ func downloadPcap(c *gin.Context) {
 			log.Println("pcap file path:", absPath)
 			currentDir, _ := os.Getwd()
 			log.Println("PWD is:", currentDir)
+			// Check if baseDir directory exists
+			if _, err := os.Stat(baseDirFlag); os.IsNotExist(err) {
+				absBaseDir, _ := filepath.Abs(baseDirFlag)
+				log.Println("Capture Directory does not exist:", absBaseDir)
+			} else {
+				log.Println("Capture Directory exists")
+				// list all files in baseDir
+				// Walk through the directory
+				var fileList []string
+				err := filepath.Walk(baseDirFlag, func(path string, info os.FileInfo, err error) error {
+					// Add the file path to the list
+					fileList = append(fileList, path)
+
+					return nil
+				})
+
+				if err != nil {
+					log.Println("File list in capture directory:")
+					log.Println(fileList)
+				}
+			}
+
 			c.JSON(http.StatusInternalServerError, gin.H{"status": "error", "message": "Pcap file not found", "pcap_filename": session.pcapFilename})
 			return
 		}
