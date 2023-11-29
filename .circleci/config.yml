@@ -38,7 +38,7 @@ jobs:
       - run:
           name: Run integration tests
           #command: docker exec -it freeradius-container radtest testuser testpassword localhost 0 testing123
-          command: pwd && ./agent/tests/prepare_python.sh
+          command: pwd && cd agent/tests && ./prepare_python.sh
       - run:
           name: Stop FreeRADIUS Docker container
           command: docker stop freeradius-container && docker rm freeradius-container
