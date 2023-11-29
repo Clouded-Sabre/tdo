@@ -118,8 +118,13 @@ func main() {
 
 	// Start the server in a goroutine
 	go func() {
-		if err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("ListenAndServeTLS: %v", err)
+		err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag)
+		if err != nil {
+			if err == http.ErrServerClosed {
+				log.Printf("http.ErrServerClosed error: %v\n", err)
+			} else {
+				log.Fatalf("ListenAndServeTLS: %v", err)
+			}
 		}
 	}()
 
