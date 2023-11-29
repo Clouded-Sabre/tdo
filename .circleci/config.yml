@@ -19,6 +19,9 @@ jobs:
           name: Start FreeRADIUS Docker container
           command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/3.0/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/3.0/users -p 1812:1812/udp freeradius/freeradius-server:latest
       - run:
+          name: Print last 5 lines of clients.conf
+          command: tail -n 5 /etc/freeradius/3.0/clients.conf
+      - run:
           name: Set FreeRADIUS IP address as environment variable
           command: echo "FREERADIUS_IP=$(docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' freeradius-container)" >> $BASH_ENV && source $BASH_ENV
       - run:
