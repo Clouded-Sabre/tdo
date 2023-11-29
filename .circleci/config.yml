@@ -41,6 +41,7 @@ jobs:
           command: |
             pwd
             cd agent/build
+            ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             sudo ./tdo_agent_linux_amd64 &
             ss -tnlp | grep 443
       - run:
