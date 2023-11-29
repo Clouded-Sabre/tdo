@@ -2,6 +2,7 @@
 
 # Application settings
 app:
+  port: "127.0.0.1:18443"
   sslcert: "../tests/cert/certificate.crt"
   sslkey: "../tests/cert/private.key"
   testhttps: true
