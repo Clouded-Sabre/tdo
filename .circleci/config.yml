@@ -40,7 +40,7 @@ jobs:
           command: |
             pwd
             cd agent/build
-            ./tdo_agent_linux_amd64 &
+            sudo ./tdo_agent_linux_amd64 &
             ss -tnlp | grep 443
       - run:
           name: Run integration tests
