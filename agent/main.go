@@ -79,6 +79,7 @@ func main() {
 		log.Println("RADIUS server is not reachable. Please check!")
 		os.Exit(0)
 	}
+	log.Println("RADIUS server is reachable.")
 
 	cmdShell = LocalShell{}
 

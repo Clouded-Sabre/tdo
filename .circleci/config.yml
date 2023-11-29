@@ -15,9 +15,11 @@ jobs:
       - run:
           name: Modify client.conf file
           command: |
-            export VM_IP=$(hostname --ip-address | grep -oP '\b(?:\d{1,3}\.){3}\d{1,3}\b')
-            echo "VM_IP: $VM_IP" 
-            tac agent/tests/clients.conf.good | awk -v ip="$VM_IP" '/ipaddr *=/ && !changed {sub(/ipaddr *=.*/, "ipaddr = " ip); changed=1} 1' | tac > agent/tests/clients.conf
+            export DOCKER_NETWORK_ID=$(docker network ls --filter driver=bridge --format "{{.ID}}")
+            echo "DOCKER_NETWORK_ID: $DOCKER_NETWORK_ID"
+            export SUBNET=$(docker network inspect -f '{{range .IPAM.Config}}{{.Subnet}}{{end}}' "$DOCKER_NETWORK_ID")
+            echo "SUBNET=$SUBNET"
+            tac agent/tests/clients.conf.good | awk -v ip="$SUBNET" '/ipaddr *=/ && !changed {sub(/ipaddr *=.*/, "ipaddr = " ip); changed=1} 1' | tac > agent/tests/clients.conf
       - run:
           name: Start FreeRADIUS Docker container
           command: docker run -d --name freeradius-container -v $(pwd)/agent/tests/clients.conf:/etc/freeradius/clients.conf -v $(pwd)/agent/tests/users:/etc/freeradius/users -p 1812:1812/udp freeradius/freeradius-server:latest
