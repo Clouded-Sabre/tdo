@@ -46,7 +46,8 @@ jobs:
             ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             sudo ss -tnlp
             sudo ./tdo_agent_linux_amd64 &
-            echo "TDO Agent started."
+            echo "Wait 10 seconds for the agent to be started."
+            sleep 10  # Introduce a 10-second delay
             ss -tnlp | grep 443
       - run:
           name: Run integration tests
