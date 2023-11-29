@@ -106,7 +106,7 @@ func main() {
 		authGroup.GET("/test_radius", testRadius) // for testing RADIUS+HTTPS
 	}
 
-	log.Println("Starting Gin Server......")
+	log.Println("Creating Gin Server......")
 
 	// Create a new HTTPS server
 	server := &http.Server{
@@ -114,12 +114,16 @@ func main() {
 		Handler: r,
 	}
 
+	log.Println("Starting Gin Server......")
+
 	// Start the server in a goroutine
 	go func() {
 		if err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("ListenAndServeTLS: %v", err)
 		}
 	}()
+
+	log.Println("Gin Server started......")
 
 	// Wait for a control-c signal to exit
 	select {}
