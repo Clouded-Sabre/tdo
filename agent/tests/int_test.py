@@ -37,7 +37,7 @@ routes = [
 # Iterate through routes and print the response status and content
 for route in routes:
     method = "POST" if "/start_tcpdump" in route or "/stop_tcpdump" in route or "/delete_pcap" in route else "GET"
-    json_data = {"pcap_filename": "test.pcap", "tcpdump_options": "-i enp0s1"} if "/start_tcpdump" in route else None
+    json_data = {"pcap_filename": "test.pcap", "tcpdump_options": "-i docker0"} if "/start_tcpdump" in route else None
 
     status_code, content = make_request(route, method, json_data)
     
