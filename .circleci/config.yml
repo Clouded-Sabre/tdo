@@ -43,6 +43,7 @@ jobs:
           command: |
             pwd
             cd agent/build
+            mkdir capture
             ls -l ../tests/cert/certificate.crt ../tests/cert/private.key
             sudo ss -tnlp
             sudo ./tdo_agent_linux_amd64 &
@@ -56,7 +57,7 @@ jobs:
             pwd && cd ../tests
             ./prepare_python.sh
             echo "integration tests completed. Clean up now ......."
-            pkill -9 -f tdo_agent_linux_amd64    
+            sudo pkill -9 -f tdo_agent_linux_amd64    
       - run:
           name: Stop FreeRADIUS Docker container
           command: |
