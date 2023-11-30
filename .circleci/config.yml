@@ -6,9 +6,9 @@ jobs:
       image: ubuntu-2204:current
     steps:
       - checkout
-      #- run:
-      #    name: unit test
-      #    command: cd agent && go test
+      - run:
+          name: unit test
+          command: cd agent && go test
       - run:
           name: Compile the binary
           command: cd agent && ./tests/build.sh && ls build

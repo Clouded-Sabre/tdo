@@ -71,15 +71,21 @@ func isRadiusServerReachable() bool {
 	rfc2865.UserName_SetString(packet, "123")     // arbitrary username
 	rfc2865.UserPassword_SetString(packet, "456") // arbitrary password
 
-	_, err := theRadiusClient.Exchange(context.Background(), packet, radius_address)
+	response, err := theRadiusClient.Exchange(context.Background(), packet, radius_address)
 	if err != nil {
 		log.Println("Error:", err)
 		log.Println("Either RADIUS is not reachable or your RADIUS secret is not correct.")
 		return false
 	}
 
-	// Check if the response is successful (you may need to customize this based on the library)
-	log.Println("RADIUS server is reachable")
-	return true
-
+	// check if the response is a valid RADIUS response
+	if response.Code == radius.CodeAccessAccept || response.Code == radius.CodeAccessReject || response.Code == radius.CodeAccessChallenge {
+		// Valid RADIUS response
+		log.Println("RADIUS is reachable.")
+		return true
+	} else {
+		// not a valid RADIUS response
+		log.Println("Got invalid RADIUS response. Are your sure it's a RADIUS server?")
+		return false
+	}
 }

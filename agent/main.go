@@ -23,7 +23,6 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"os/user"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -44,7 +43,7 @@ var (
 	radius_secret     string
 	radius_address    string
 	testHttpsFlag     bool // enable/disable the test HTTPS endpoint
-	ginInTesting      = true
+	ginInTesting      bool
 
 	version string
 )
@@ -76,12 +75,11 @@ func main() {
 	radius_address = viper.GetString("radius.address")
 
 	log.Println("Checking if RADIUS server is reachable......")
-	if !isRadiusServerReachable() {
-		log.Println("RADIUS server is not reachable. Please check!")
+	if !isRadiusServerReachable() { // logging message is handled by the function itself
 		os.Exit(0)
 	}
-	log.Println("RADIUS server is reachable.")
 
+	// set the command shell, could be a real local shell or a mocked shell for testing
 	cmdShell = LocalShell{}
 
 	// Create a Gin router
@@ -94,16 +92,16 @@ func main() {
 	authGroup := r.Group("/", BasicAuthMiddleware)
 
 	// Routes
-	authGroup.POST("/v1/start_tcpdump", startTcpdump)
-	authGroup.POST("/v1/stop_tcpdump", stopTcpdump)
-	authGroup.GET("/v1/download_pcap", downloadPcap)
-	authGroup.POST("/v1/delete_pcap", deletePcap)
-	authGroup.GET("/v1/list_sessions", listSessions)
+	authGroup.POST("/v1/start_tcpdump", startTcpdump)       // start a new or existing (stopped) tcpdump session
+	authGroup.POST("/v1/stop_tcpdump", stopTcpdump)         // stop a running tcpdown session
+	authGroup.GET("/v1/download_pcap", downloadPcap)        // download the session's pcap file
+	authGroup.POST("/v1/delete_pcap", deletePcap)           // delete session's pcap file
+	authGroup.GET("/v1/list_sessions", listSessions)        // list all active sessions created the RADIUS user
 	authGroup.GET("/v1/get_filesize", getFilesize)          // report pcap file size
 	authGroup.GET("/v1/get_duration", getDuration)          // report capture session duration
 	authGroup.GET("/v1/get_storage_space", getStorageSpace) // report available storage space
 	if testHttpsFlag {
-		r.GET("/test_https", testHttps)           // for testing HTTPS
+		r.GET("/test_https", testHttps)           // for testing HTTPS connection
 		authGroup.GET("/test_radius", testRadius) // for testing RADIUS+HTTPS
 	}
 
@@ -113,10 +111,11 @@ func main() {
 		Handler: r,
 	}
 
-	// for gracefully shutdown
-	quit := make(chan os.Signal, 1)
+	// for gracefully shutdown on os.Interrupt signal(-2)
+	quit := make(chan os.Signal, 1) //buffered
 	signal.Notify(quit, os.Interrupt)
 
+	// go routine to catch OS.Interrupt signal
 	go func() {
 		<-quit
 		log.Println("receive interrupt signal")
@@ -125,6 +124,8 @@ func main() {
 		}
 	}()
 
+	// starting Gin server
+	log.Println("Starting Gin server......")
 	if err := server.ListenAndServeTLS(sslCertPathFlag, sslKeyPathFlag); err != nil {
 		if err == http.ErrServerClosed {
 			log.Println("Server closed under request")
@@ -133,7 +134,9 @@ func main() {
 		}
 	}
 
+	// exiting after Gin server closes
 	log.Println("Server exiting...")
+
 	//r.RunTLS(listenAddressFlag, sslCertPathFlag, sslKeyPathFlag)
 }
 
@@ -539,14 +542,6 @@ func getAvailableSpaceMB(volumePath string) (float64, error) {
 	// Calculate available space in MB
 	availableSpaceMB := float64(stat.Bavail*uint64(stat.Bsize)) / (1024 * 1024)
 	return availableSpaceMB, nil
-}
-
-func isRootUser() bool {
-	u, err := user.Current()
-	if err != nil {
-		return false
-	}
-	return u.Uid == "0" || u.Gid == "0"
 }
 
 func testHttps(c *gin.Context) {
